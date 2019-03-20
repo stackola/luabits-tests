@@ -3,16 +3,22 @@ const axios = require("axios");
 let liveUrl = "https://luabits.com/run";
 let devUrl = "http://localhost:5001/luabits-a4c52/us-central1/run";
 var deepEqual = require("deep-equal");
-let dev = true;
-let delay = 1000;
+let dev = false;
+let delay = dev ? 1000 : 5000;
 var colors = require("colors");
 
-let currentTest = 0;
+const { performance } = require("perf_hooks");
+let requestTimes = [];
+
+let currentTest = 14;
+
+let t0, t1;
 
 let passed = 0;
 let failed = 0;
 console.clear();
 function runTest(t) {
+  t0 = performance.now();
   console.log("Test:   " + t.name);
   let urlToUse = dev ? devUrl : liveUrl;
   let url = urlToUse + t.path;
@@ -62,12 +68,18 @@ function runTest(t) {
 }
 
 function testOk(t) {
-  console.log("        Passed!".green);
+  t1 = performance.now();
+  let secs = Math.round((t1 - t0) / 10) / 100;
+  requestTimes.push(secs);
+  console.log(("        Passed! (" + secs + "s)").green);
   passed++;
   next();
 }
 function testFail(t) {
-  console.log("        Failed!".red);
+  t1 = performance.now();
+  let secs = Math.round((t1 - t0) / 10) / 100;
+  requestTimes.push(secs);
+  console.log(("        Failed! (" + secs + "s)").red);
   failed++;
   next();
 }
@@ -82,6 +94,18 @@ function next() {
     console.log("---Done---");
     console.log("Passed: " + passed);
     console.log("Failed: " + failed);
+    console.log(
+      "Average time: " +
+        Math.round(
+          (requestTimes.reduce((a, b) => {
+            return a + b;
+          }) /
+            requestTimes.length) *
+            100
+        ) /
+          100 +
+        "s"
+    );
   }
 }
 
